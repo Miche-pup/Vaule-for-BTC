@@ -1,0 +1,42 @@
+// src/lib/supabaseClient.ts
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+// Perform initial validation for URL and Anon Key as they are broadly used
+if (!supabaseUrl) {
+  throw new Error('CRITICAL: Missing environment variable: NEXT_PUBLIC_SUPABASE_URL');
+}
+if (!supabaseAnonKey) {
+  throw new Error('CRITICAL: Missing environment variable: NEXT_PUBLIC_SUPABASE_ANON_KEY');
+}
+
+/**
+ * Creates a Supabase client instance for server-side operations requiring service_role privileges.
+ * This client bypasses Row Level Security. Use with caution.
+ * Throws an error if SUPABASE_SERVICE_ROLE_KEY is not set.
+ */
+export const getSupabaseServiceRoleClient = (): SupabaseClient => {
+  if (!supabaseServiceRoleKey) {
+    // This error is critical if this function is called.
+    throw new Error('CRITICAL: Missing environment variable: SUPABASE_SERVICE_ROLE_KEY. Cannot create service role client.');
+  }
+  // For server-side, especially API routes, we usually don't want client-side session persistence.
+  return createClient(supabaseUrl!, supabaseServiceRoleKey!, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
+};
+
+/**
+ * Creates a Supabase client instance using the public anonymous key.
+ * Suitable for client-side operations or server-side operations that only need public access.
+ */
+export const getSupabaseAnonClient = (): SupabaseClient => {
+  // supabaseUrl and supabaseAnonKey are already validated at the module level.
+  return createClient(supabaseUrl!, supabaseAnonKey!);
+};
